@@ -18,3 +18,5 @@ void FDatadogModModule::ShutdownModule()
 #undef LOCTEXT_NAMESPACE
 	
 IMPLEMENT_MODULE(FDatadogModModule, DatadogMod)
+
+DEFINE_LOG_CATEGORY(LogDatadogMod);
