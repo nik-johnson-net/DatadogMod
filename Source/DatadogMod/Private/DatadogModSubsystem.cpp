@@ -33,9 +33,13 @@ void ADatadogModSubsystem::CollectStats() {
 	}
 
 	UE_LOG(LogDatadogMod, Verbose, TEXT("Collecting stats."));
-	CollectPowerStats(world);
-	CollectStatistics(world);
+	UDatadogPayloadBuilder payloadBuilder;
+	payloadBuilder.SetInterval(collectionPeriod);
+	payloadBuilder.SetTimestamp(FDateTime::UtcNow().ToUnixTimestamp());
+	CollectPowerStats(world, payloadBuilder);
+	CollectStatistics(world, payloadBuilder);
 	
+	datadogApi->Submit(payloadBuilder.Build());
 	// Machines:
 	//   Check Counts
 	//   Check Efficiency
@@ -57,7 +61,7 @@ void ADatadogModSubsystem::CollectStats() {
 	//   Count Slow / Skipped Ticks
 }
 
-void ADatadogModSubsystem::CollectPowerStats(UWorld* world)
+void ADatadogModSubsystem::CollectPowerStats(UWorld* world, UDatadogPayloadBuilder &payloadBuilder)
 {
 	auto circuitSubsystem = AFGCircuitSubsystem::Get(world);
 	if (circuitSubsystem == NULL) {
@@ -80,6 +84,14 @@ void ADatadogModSubsystem::CollectPowerStats(UWorld* world)
 		// Log some useful info.
 		// TODO: Replace with better accessors on powerCircuit
 		UE_LOG(LogDatadogMod, Verbose, TEXT("Power Stats: id %d, produced %.2fMW, consumed %.2fMW, capacity %.2fMW, max consumption %.2fMW, battery charging %.2fMW"), powerCircuit->GetCircuitID(), circuitStats.PowerProduced, circuitStats.PowerConsumed, circuitStats.PowerProductionCapacity, circuitStats.MaximumPowerConsumption, circuitStats.BatteryPowerInput);
+		TArray<FString> tags{ "circuit_id:" + FString::FromInt(powerCircuit->GetCircuitID()) };
+		payloadBuilder.AddGauge(FString(TEXT("satisfactory.power.produced")), tags, circuitStats.PowerProduced, "MW");
+		payloadBuilder.AddGauge(FString(TEXT("satisfactory.power.production_capacity")), tags, circuitStats.PowerProductionCapacity, "MW");
+		payloadBuilder.AddGauge(FString(TEXT("satisfactory.power.consumed")), tags, circuitStats.PowerConsumed, "MW");
+		payloadBuilder.AddGauge(FString(TEXT("satisfactory.power.consumption_maximum")), tags, circuitStats.MaximumPowerConsumption, "MW");
+		payloadBuilder.AddGauge(FString(TEXT("satisfactory.power.battery_input")), tags, circuitStats.BatteryPowerInput, "MW");
+		payloadBuilder.AddGauge(FString(TEXT("satisfactory.power.battery_stored")), tags, powerCircuit->GetBatterySumPowerStore(), "MW");
+		payloadBuilder.AddGauge(FString(TEXT("satisfactory.power.battery_capacity")), tags, powerCircuit->GetBatterySumPowerStoreCapacity(), "MW");
 	}
 	
 	// Pull stats for Power Switches.
@@ -94,12 +106,14 @@ void ADatadogModSubsystem::CollectPowerStats(UWorld* world)
 
 			// Record Switch State
 			UE_LOG(LogDatadogMod, Verbose, TEXT("Power Switch %s is %b"), *circuitSwitch->GetBuildingTag(), circuitSwitch->IsSwitchOn());
+			TArray<FString> tags{ TEXT("switch_name:") + circuitSwitch->GetBuildingTag() };
+			payloadBuilder.AddGauge(FString(TEXT("satisfactory.power.switch")), tags, circuitSwitch->IsSwitchOn());
 		}
 
 	}
 }
 
-void ADatadogModSubsystem::CollectStatistics(UWorld* world)
+void ADatadogModSubsystem::CollectStatistics(UWorld* world, UDatadogPayloadBuilder &payloadBuilder)
 {
 	auto statisticsSubsystem = AFGStatisticsSubsystem::Get(world);
 	if (statisticsSubsystem == NULL) {
@@ -108,4 +122,8 @@ void ADatadogModSubsystem::CollectStatistics(UWorld* world)
 	}
 
 	UE_LOG(LogDatadogMod, Verbose, TEXT("Got stats"));
+	for (auto& production : statisticsSubsystem->mItemsProducedPerFrequencyMap) {
+		TArray<FString> tags{ TEXT("item:") + UFGItemDescriptor::GetItemName(production.Key).ToString()};
+		payloadBuilder.AddGauge(FString(TEXT("satisfactory.items.produced")), tags, production.Value, TEXT("item"));
+	}
 }

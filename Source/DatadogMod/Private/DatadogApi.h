@@ -43,6 +43,27 @@ struct FMetricsPayload {
 	TArray<FDatadogTimeseries> series;
 };
 
+UCLASS()
+class UDatadogPayloadBuilder : public UObject {
+	GENERATED_BODY()
+
+public:
+	void SetTimestamp(int64 timestamp);
+	void SetInterval(int64 interval);
+	void SetGlobalTags(TArray<FString> &tags);
+	void AddGauge(FString name, TArray<FString>& tags, double value, FString unit = "");
+	void AddCounter(FString name, TArray<FString>& tags, double value, FString unit = "");
+	void AddRate(FString name, TArray<FString>& tags, double value, FString unit = "");
+	TArray<FDatadogTimeseries> Build();
+
+private:
+	void AddMetric(MetricType type, FString& name, TArray<FString>& tags, double value, FString unit = "");
+	int64 timestamp;
+	int64 interval;
+	TArray<FDatadogTimeseries> timeseries;
+	TArray<FString> tags;
+};
+
 UCLASS(config=Game)
 class UDatadogApi : public UObject
 {
@@ -50,7 +71,7 @@ class UDatadogApi : public UObject
 	
 public:
 	UDatadogApi();
-	void Submit(TArray<FDatadogTimeseries> &timeseries);
+	void Submit(TArray<FDatadogTimeseries> timeseries);
 	void OnResponseReceived(FHttpRequestPtr Request, FHttpResponsePtr Response, bool bWasSuccessful);
 
 private:

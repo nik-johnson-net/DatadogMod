@@ -25,13 +25,13 @@ static FString SiteToHost(FString& site) {
 
 UDatadogApi::UDatadogApi()
 {
-	UE_LOG(LogDatadogMod, Error, TEXT("Detected API Key %s"), *ddApiKey);
+	UE_LOG(LogDatadogMod, Verbose, TEXT("Detected API Key %s"), *ddApiKey);
 	GConfig->GetString(TEXT("/Script/DatadogMod.DatadogApi"), TEXT("ddApiKey"), ddApiKey, GGameIni);
-	UE_LOG(LogDatadogMod, Error, TEXT("Detected API Key %s"), *ddApiKey);
+	UE_LOG(LogDatadogMod, Verbose, TEXT("Detected API Key %s"), *ddApiKey);
 	http = &FHttpModule::Get();
 }
 
-void UDatadogApi::Submit(TArray<FDatadogTimeseries> &timeseries)
+void UDatadogApi::Submit(TArray<FDatadogTimeseries> timeseries)
 {
 	FString jsonString;
 
@@ -72,3 +72,63 @@ void UDatadogApi::OnResponseReceived(FHttpRequestPtr Request, FHttpResponsePtr R
 	}
 }
 
+void UDatadogPayloadBuilder::SetTimestamp(int64 ts)
+{
+	timestamp = timestamp;
+}
+
+void UDatadogPayloadBuilder::SetInterval(int64 newInterval)
+{
+	interval = newInterval;
+}
+
+void UDatadogPayloadBuilder::SetGlobalTags(TArray<FString>& newTags)
+{
+	tags = newTags;
+}
+
+void UDatadogPayloadBuilder::AddGauge(FString name, TArray<FString>& ntags, double value, FString unit)
+{
+	AddMetric(MetricType::Gauge, name, ntags, value, unit);
+}
+
+void UDatadogPayloadBuilder::AddCounter(FString name, TArray<FString>& ntags, double value, FString unit)
+{
+	AddMetric(MetricType::Count, name, ntags, value, unit);
+}
+
+void UDatadogPayloadBuilder::AddRate(FString name, TArray<FString>& ntags, double value, FString unit)
+{
+	AddMetric(MetricType::Rate, name, ntags, value, unit);
+}
+
+TArray<FDatadogTimeseries> UDatadogPayloadBuilder::Build()
+{
+	TArray<FDatadogTimeseries> builtTimeseries;
+
+	for (auto& it : timeseries) {
+		it.interval = interval;
+		for (auto& tag : tags) {
+			it.tags.Add(tag);
+		}
+
+		it.points[0].timestamp = timestamp;
+	}
+
+	return timeseries;
+}
+
+void UDatadogPayloadBuilder::AddMetric(MetricType type, FString& name, TArray<FString>& ntags, double value, FString unit)
+{
+	FDatadogTimeseries newTimeseries;
+	newTimeseries.metric = name;
+	newTimeseries.tags = ntags;
+	newTimeseries.unit = unit;
+	newTimeseries.type = type;
+
+	FTimeseriesPoint point;
+	point.value = value;
+	newTimeseries.points.Add(point);
+
+	timeseries.Add(newTimeseries);
+}

@@ -18,8 +18,8 @@ class DATADOGMOD_API ADatadogModSubsystem : public AModSubsystem
 private:
 	virtual void BeginPlay() override;
 	void CollectStats();
-	void CollectPowerStats(UWorld* world);
-	void CollectStatistics(UWorld* world);
+	void CollectPowerStats(UWorld* world, UDatadogPayloadBuilder &payloadBuilder);
+	void CollectStatistics(UWorld* world, UDatadogPayloadBuilder &payloadBuilder);
 
 	FTimerHandle statTimerHandle;
 
