@@ -11,6 +11,7 @@
 #include "FGStatisticsSubsystem.h"
 
 void ADatadogModSubsystem::BeginPlay() {
+	UE_LOG(LogDatadogMod, Verbose, TEXT("Datadog Subsystem Initializing."));
 	Super::BeginPlay();
 
 	datadogApi = NewObject<UDatadogApi>();

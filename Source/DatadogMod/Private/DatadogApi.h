@@ -43,7 +43,7 @@ struct FMetricsPayload {
 	TArray<FDatadogTimeseries> series;
 };
 
-UCLASS(Config=Game)
+UCLASS(config=Game)
 class UDatadogApi : public UObject
 {
 	GENERATED_BODY()

@@ -26,6 +26,8 @@ static FString SiteToHost(FString& site) {
 UDatadogApi::UDatadogApi()
 {
 	UE_LOG(LogDatadogMod, Error, TEXT("Detected API Key %s"), *ddApiKey);
+	GConfig->GetString(TEXT("/Script/DatadogMod.DatadogApi"), TEXT("ddApiKey"), ddApiKey, GGameIni);
+	UE_LOG(LogDatadogMod, Error, TEXT("Detected API Key %s"), *ddApiKey);
 	http = &FHttpModule::Get();
 }
 
