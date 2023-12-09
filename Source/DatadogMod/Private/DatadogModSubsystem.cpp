@@ -13,6 +13,7 @@
 void ADatadogModSubsystem::BeginPlay() {
 	Super::BeginPlay();
 
+	datadogApi = NewObject<UDatadogApi>();
 	GetWorldTimerManager().SetTimer(statTimerHandle, this, &ADatadogModSubsystem::CollectStats, collectionPeriod, true);
 	UE_LOG(LogDatadogMod, Verbose, TEXT("Datadog Subsystem Initialized."));
 }
@@ -91,7 +92,7 @@ void ADatadogModSubsystem::CollectPowerStats(UWorld* world)
 			}
 
 			// Record Switch State
-			UE_LOG(LogDatadogMod, Verbose, TEXT("Power Switch %s is %b"), circuitSwitch->GetBuildingTag(), circuitSwitch->IsSwitchOn());
+			UE_LOG(LogDatadogMod, Verbose, TEXT("Power Switch %s is %b"), *circuitSwitch->GetBuildingTag(), circuitSwitch->IsSwitchOn());
 		}
 
 	}

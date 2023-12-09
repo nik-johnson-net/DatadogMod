@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "Subsystem/ModSubsystem.h"
+#include "DatadogApi.h"
 #include "DatadogModSubsystem.generated.h"
 
 /**
@@ -24,4 +25,11 @@ private:
 
 	UPROPERTY()
 	float collectionPeriod = 15.0f;
+
+	UDatadogApi *datadogApi;
 };
+
+// Create a new UObject for handling building + sending payloads
+// Payload->SetTimestamp()
+// Payload->Add(metric, tags, value, type)
+// DatadogApi->Submit(payload)

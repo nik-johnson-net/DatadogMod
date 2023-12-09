@@ -37,6 +37,7 @@ public class DatadogMod : ModuleRules
             "TemplateSequence",
             "NetCore",
             "GameplayTags",
+            "Http", "Json", "JsonUtilities",
         });
 
         // FactoryGame plugins
