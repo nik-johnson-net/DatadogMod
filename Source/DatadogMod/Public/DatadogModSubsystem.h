@@ -18,18 +18,14 @@ class DATADOGMOD_API ADatadogModSubsystem : public AModSubsystem
 private:
 	virtual void BeginPlay() override;
 	void CollectStats();
-	void CollectPowerStats(UWorld* world, UDatadogPayloadBuilder &payloadBuilder);
-	void CollectStatistics(UWorld* world, UDatadogPayloadBuilder &payloadBuilder);
+	void CollectPowerStats(UWorld* world, DatadogPayloadBuilder &payloadBuilder);
+	void CollectStatistics(UWorld* world, DatadogPayloadBuilder &payloadBuilder);
 
 	FTimerHandle statTimerHandle;
 
 	UPROPERTY()
 	float collectionPeriod = 15.0f;
 
+	UPROPERTY()
 	UDatadogApi *datadogApi;
 };
-
-// Create a new UObject for handling building + sending payloads
-// Payload->SetTimestamp()
-// Payload->Add(metric, tags, value, type)
-// DatadogApi->Submit(payload)

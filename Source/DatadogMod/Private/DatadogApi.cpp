@@ -1,34 +1,37 @@
 #include "DatadogApi.h"
 #include "Runtime/JsonUtilities/Public/JsonObjectConverter.h"
 
-
-static FString SiteToHost(FString& site) {
+static const FString SiteToHost(FString& site) {
 	if (site.Equals("datadoghq.com")) {
-		return "https://app.datadoghq.com";
+		return TEXT("https://api.datadoghq.com");
 	}
 	else if (site.Equals("us3.datadoghq.com")) {
-		return "https://us3.datadoghq.com";
+		return TEXT("https://api.us3.datadoghq.com");
 	}
 	else if (site.Equals("us5.datadoghq.com")) {
-		return "https://us5.datadoghq.com";
+		return TEXT("https://api.us5.datadoghq.com");
 	}
 	else if (site.Equals("datadoghq.eu")) {
-		return "https://app.datadoghq.eu";
+		return TEXT("https://api.datadoghq.eu");
 	}
 	else if (site.Equals("ap1.datadoghq.com")) {
-		return "https://ap1.datadoghq.com";
+		return TEXT("https://api.ap1.datadoghq.com");
 	}
 	else {
-		return "";
+		return TEXT("");
 	}
 }
 
 UDatadogApi::UDatadogApi()
 {
-	UE_LOG(LogDatadogMod, Verbose, TEXT("Detected API Key %s"), *ddApiKey);
-	GConfig->GetString(TEXT("/Script/DatadogMod.DatadogApi"), TEXT("ddApiKey"), ddApiKey, GGameIni);
-	UE_LOG(LogDatadogMod, Verbose, TEXT("Detected API Key %s"), *ddApiKey);
-	http = &FHttpModule::Get();
+	GConfig->GetString(TEXT("/Script/DatadogMod.DatadogApi"), TEXT("DatadogApiKey"), DatadogApiKey, GGameIni);
+	GConfig->GetString(TEXT("/Script/DatadogMod.DatadogApi"), TEXT("DatadogSite"), DatadogSite, GGameIni);
+
+	// Set the Datadog Host
+	mHost = SiteToHost(DatadogSite);
+	if (mHost.Equals("")) {
+		UE_LOG(LogDatadogMod, Error, TEXT("Unrecognized datadog site %s"), *DatadogSite);
+	}
 }
 
 void UDatadogApi::Submit(TArray<FDatadogTimeseries> timeseries)
@@ -46,21 +49,18 @@ void UDatadogApi::Submit(TArray<FDatadogTimeseries> timeseries)
 
 	// TODO: Check the payload size. Compressed, it must be under 5 MB. Uncompressed, under 512kB.
 
+	auto http = &FHttpModule::Get();
 	TSharedRef<IHttpRequest> Request = http->CreateRequest();
 	Request->OnProcessRequestComplete().BindUObject(this, &UDatadogApi::OnResponseReceived);
 	
-	// Set the Datadog Host
-	auto host = SiteToHost(ddSite);
-	if (host.Equals("")) {
-		UE_LOG(LogDatadogMod, Error, TEXT("Unrecognized datadog site %s"), *ddSite);
-		return;
-	}
-	
-	Request->SetURL(host + "/api/v2/series");
+	FString url = mHost + TEXT("/api/v2/series");
+	UE_LOG(LogDatadogMod, Verbose, TEXT("Submitting %d metrics with site %s and key %s to %s. Payload:\n%s"), timeseries.Num(), *DatadogSite, *DatadogApiKey, *url, *jsonString);
+	Request->SetURL(url);
 	Request->SetVerb("POST");
-	Request->SetHeader(TEXT("User-Agent"), "X-UnrealEngine-Agent");
-	Request->SetHeader("Content-Type", TEXT("application/json"));
-	Request->SetHeader("DD-API-KEY", ddApiKey);
+	Request->SetHeader(TEXT("User-Agent"), TEXT("X-UnrealEngine-Agent"));
+	Request->SetHeader(TEXT("Content-Type"), TEXT("application/json"));
+	Request->SetHeader(TEXT("Accept"), TEXT("application/json"));
+	Request->SetHeader(TEXT("DD-API-KEY"), DatadogApiKey);
 	Request->SetContentAsString(jsonString);
 	Request->ProcessRequest();
 }
@@ -69,40 +69,42 @@ void UDatadogApi::OnResponseReceived(FHttpRequestPtr Request, FHttpResponsePtr R
 {
 	if (!bWasSuccessful) {
 		UE_LOG(LogDatadogMod, Error, TEXT("Metrics submission rejected by Datadog: %s"), *Response->GetContentAsString());
+	} else {
+		UE_LOG(LogDatadogMod, Error, TEXT("Metrics submission success: %s"), *Response->GetContentAsString());
 	}
 }
 
-void UDatadogPayloadBuilder::SetTimestamp(int64 ts)
+void DatadogPayloadBuilder::SetTimestamp(int64 ts)
 {
 	timestamp = timestamp;
 }
 
-void UDatadogPayloadBuilder::SetInterval(int64 newInterval)
+void DatadogPayloadBuilder::SetInterval(int64 newInterval)
 {
 	interval = newInterval;
 }
 
-void UDatadogPayloadBuilder::SetGlobalTags(TArray<FString>& newTags)
+void DatadogPayloadBuilder::SetGlobalTags(TArray<FString>& newTags)
 {
 	tags = newTags;
 }
 
-void UDatadogPayloadBuilder::AddGauge(FString name, TArray<FString>& ntags, double value, FString unit)
+void DatadogPayloadBuilder::AddGauge(FString name, TArray<FString>& ntags, double value, FString unit)
 {
 	AddMetric(MetricType::Gauge, name, ntags, value, unit);
 }
 
-void UDatadogPayloadBuilder::AddCounter(FString name, TArray<FString>& ntags, double value, FString unit)
+void DatadogPayloadBuilder::AddCounter(FString name, TArray<FString>& ntags, double value, FString unit)
 {
 	AddMetric(MetricType::Count, name, ntags, value, unit);
 }
 
-void UDatadogPayloadBuilder::AddRate(FString name, TArray<FString>& ntags, double value, FString unit)
+void DatadogPayloadBuilder::AddRate(FString name, TArray<FString>& ntags, double value, FString unit)
 {
 	AddMetric(MetricType::Rate, name, ntags, value, unit);
 }
 
-TArray<FDatadogTimeseries> UDatadogPayloadBuilder::Build()
+TArray<FDatadogTimeseries> DatadogPayloadBuilder::Build()
 {
 	TArray<FDatadogTimeseries> builtTimeseries;
 
@@ -118,7 +120,7 @@ TArray<FDatadogTimeseries> UDatadogPayloadBuilder::Build()
 	return timeseries;
 }
 
-void UDatadogPayloadBuilder::AddMetric(MetricType type, FString& name, TArray<FString>& ntags, double value, FString unit)
+void DatadogPayloadBuilder::AddMetric(MetricType type, FString& name, TArray<FString>& ntags, double value, FString unit)
 {
 	FDatadogTimeseries newTimeseries;
 	newTimeseries.metric = name;

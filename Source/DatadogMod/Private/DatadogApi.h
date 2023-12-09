@@ -6,7 +6,7 @@
 #include "DatadogApi.generated.h"
 
 UENUM()
-enum MetricType {
+enum class MetricType : uint8 {
 	Unspecified,
 	Count,
 	Rate,
@@ -18,7 +18,10 @@ struct FTimeseriesPoint {
 	
 	GENERATED_BODY()
 
+	UPROPERTY()
 	int64 timestamp;
+
+	UPROPERTY()
 	double value;
 };
 
@@ -27,11 +30,22 @@ struct FDatadogTimeseries {
 	
 	GENERATED_BODY()
 	
+	UPROPERTY()
 	int64 interval;
+
+	UPROPERTY()
 	FString metric;
+
+	UPROPERTY()
 	TArray<FString> tags;
+
+	UPROPERTY()
 	FString unit;
+
+	UPROPERTY()
 	TArray<FTimeseriesPoint> points;
+
+	UPROPERTY()
 	MetricType type;
 };
 
@@ -40,13 +54,11 @@ USTRUCT()
 struct FMetricsPayload {
 	GENERATED_BODY()
 
+	UPROPERTY()
 	TArray<FDatadogTimeseries> series;
 };
 
-UCLASS()
-class UDatadogPayloadBuilder : public UObject {
-	GENERATED_BODY()
-
+class DatadogPayloadBuilder {
 public:
 	void SetTimestamp(int64 timestamp);
 	void SetInterval(int64 interval);
@@ -75,11 +87,11 @@ public:
 	void OnResponseReceived(FHttpRequestPtr Request, FHttpResponsePtr Response, bool bWasSuccessful);
 
 private:
-	FHttpModule* http;
-
 	UPROPERTY(Config)
-	FString ddApiKey;
+	FString DatadogApiKey;
 	
 	UPROPERTY(Config)
-	FString ddSite;
+	FString DatadogSite;
+	
+	FString mHost;
 };
