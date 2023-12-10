@@ -45,7 +45,7 @@ UDatadogApi::UDatadogApi()
 	// Set the Datadog Host
 	mHost = SiteToHost(DatadogSite);
 	if (mHost.Equals("")) {
-		UE_LOG(LogDatadogMod, Error, TEXT("Unrecognized datadog site %s"), *DatadogSite);
+		UE_LOG(LogDatadogMod, Warning, TEXT("Unrecognized datadog site %s"), *DatadogSite);
 	}
 }
 
@@ -83,9 +83,11 @@ void UDatadogApi::Submit(TArray<FDatadogTimeseries> timeseries)
 void UDatadogApi::OnResponseReceived(FHttpRequestPtr Request, FHttpResponsePtr Response, bool bWasSuccessful)
 {
 	if (!bWasSuccessful) {
-		UE_LOG(LogDatadogMod, Error, TEXT("Metrics submission rejected by Datadog: %s"), *Response->GetContentAsString());
+		UE_LOG(LogDatadogMod, Error, TEXT("Metrics submission unable to send."));
 	} else {
-		UE_LOG(LogDatadogMod, Error, TEXT("Metrics submission success: %s"), *Response->GetContentAsString());
+		if (Response->GetResponseCode() != 202) {
+			UE_LOG(LogDatadogMod, Error, TEXT("Metrics submission rejected: %s"), *Response->GetContentAsString());
+		}
 	}
 }
 

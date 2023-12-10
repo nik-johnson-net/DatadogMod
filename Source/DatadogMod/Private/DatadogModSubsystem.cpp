@@ -2,13 +2,6 @@
 
 
 #include "DatadogModSubsystem.h"
-#include "FactoryStatHelpers.h"
-#include "FGCircuitSubsystem.h"
-#include "DatadogMod.h"
-#include "FGPowerCircuit.h"
-#include "Buildables/FGBuildableCircuitSwitch.h"
-#include "Buildables/FGBuildablePriorityPowerSwitch.h"
-#include "FGStatisticsSubsystem.h"
 
 void ADatadogModSubsystem::BeginPlay() {
 	Super::BeginPlay();
@@ -31,14 +24,22 @@ void ADatadogModSubsystem::CollectStats() {
 		return;
 	}
 
+	auto timeStart = FDateTime::Now();
 	UE_LOG(LogDatadogMod, Verbose, TEXT("Collecting stats."));
+	
 	DatadogPayloadBuilder payloadBuilder;
 	payloadBuilder.SetInterval(collectionPeriod);
 	payloadBuilder.SetTimestamp(FDateTime::UtcNow().ToUnixTimestamp());
-	CollectPowerStats(world, payloadBuilder);
-	CollectStatistics(world, payloadBuilder);
+
+	for (auto& collector : Collectors) {
+		collector->Collect(world, payloadBuilder);
+	}
 
 	datadogApi->Submit(payloadBuilder.Build());
+
+	auto elapsed = (FDateTime::Now() - timeStart).GetTotalSeconds();
+	UE_LOG(LogDatadogMod, Verbose, TEXT("Stats collection and submission took %.3f seconds"), elapsed);
+	
 	// Machines:
 	//   Check Counts
 	//   Check Efficiency
@@ -60,55 +61,7 @@ void ADatadogModSubsystem::CollectStats() {
 	//   Count Slow / Skipped Ticks
 }
 
-void ADatadogModSubsystem::CollectPowerStats(UWorld* world, DatadogPayloadBuilder &payloadBuilder)
-{
-	auto circuitSubsystem = AFGCircuitSubsystem::Get(world);
-	if (circuitSubsystem == NULL) {
-		UE_LOG(LogDatadogMod, Error, TEXT("Can't load CircuitSubsystem, not reporting power stats."));
-		return;
-	}
-	
-	// Pull stats for all circuits.
-	for (auto& it : circuitSubsystem->mCircuits) {
-		// Cast to a Power Circuit. If it's not, skip. Right now there are only power circuits, so this should always pass.
-		UFGPowerCircuit* powerCircuit = Cast<UFGPowerCircuit>(it.Value);
-		if (powerCircuit == NULL) {
-			UE_LOG(LogDatadogMod, Verbose, TEXT("Failed to cast circuit id %d to UFGPowerCircuit"), it.Value->GetCircuitID());
-			continue;
-		}
-
-		FPowerCircuitStats circuitStats;
-		powerCircuit->GetStats(circuitStats);
-		
-		TArray<FString> tags{ "circuit_id:" + FString::FromInt(powerCircuit->GetCircuitID()) };
-		payloadBuilder.AddGauge(FString(TEXT("satisfactory.power.produced")), tags, circuitStats.PowerProduced, "MW");
-		payloadBuilder.AddGauge(FString(TEXT("satisfactory.power.production_capacity")), tags, circuitStats.PowerProductionCapacity, "MW");
-		payloadBuilder.AddGauge(FString(TEXT("satisfactory.power.consumed")), tags, circuitStats.PowerConsumed, "MW");
-		payloadBuilder.AddGauge(FString(TEXT("satisfactory.power.consumption_maximum")), tags, circuitStats.MaximumPowerConsumption, "MW");
-		payloadBuilder.AddGauge(FString(TEXT("satisfactory.power.battery_input")), tags, circuitStats.BatteryPowerInput, "MW");
-		payloadBuilder.AddGauge(FString(TEXT("satisfactory.power.battery_stored")), tags, powerCircuit->GetBatterySumPowerStore(), "MW");
-		payloadBuilder.AddGauge(FString(TEXT("satisfactory.power.battery_capacity")), tags, powerCircuit->GetBatterySumPowerStoreCapacity(), "MW");
-	}
-	
-	// Pull stats for Power Switches.
-	for (auto& it : circuitSubsystem->mCircuitBridges) {
-		// Check if it's a physical power switch
-		AFGBuildableCircuitSwitch* circuitSwitch = Cast<AFGBuildableCircuitSwitch>(it);
-		if (circuitSwitch != NULL) {
-			AFGBuildablePriorityPowerSwitch* priorityPowerSwitch = Cast<AFGBuildablePriorityPowerSwitch>(circuitSwitch);
-			if (priorityPowerSwitch != NULL) {
-				// Is there more we can do with a Priority Switch?
-			}
-
-			// Record Switch State
-			UE_LOG(LogDatadogMod, Verbose, TEXT("Power Switch %s is %b"), *circuitSwitch->GetBuildingTag(), circuitSwitch->IsSwitchOn());
-			TArray<FString> tags{ TEXT("switch_name:") + circuitSwitch->GetBuildingTag() };
-			payloadBuilder.AddGauge(FString(TEXT("satisfactory.power.switch")), tags, circuitSwitch->IsSwitchOn());
-		}
-
-	}
-}
-
+/*
 void ADatadogModSubsystem::CollectStatistics(UWorld* world, DatadogPayloadBuilder &payloadBuilder)
 {
 	auto statisticsSubsystem = AFGStatisticsSubsystem::Get(world);
@@ -117,8 +70,13 @@ void ADatadogModSubsystem::CollectStatistics(UWorld* world, DatadogPayloadBuilde
 		return;
 	}
 
-	for (auto& production : statisticsSubsystem->mItemsProducedPerFrequencyMap) {
+	UE_LOG(LogDatadogMod, Verbose, TEXT("mItemsProduced has %d items. mActorsBuiltCount has %d items, mItemsManuallyCraftedCount has %d items."), statisticsSubsystem->mItemsProduced.Num(), statisticsSubsystem->mActorsBuiltCount.Num(), statisticsSubsystem->mItemsManuallyCraftedCount.Num());
+
+	for (auto& production : statisticsSubsystem->mItemsProduced) {
 		TArray<FString> tags{ TEXT("item:") + UFGItemDescriptor::GetItemName(production.Key).ToString()};
-		payloadBuilder.AddGauge(FString(TEXT("satisfactory.items.produced")), tags, production.Value, TEXT("item"));
+		auto delta = production.Value - mItemsProduced[production.Key];
+		mItemsProduced[production.Key] = production.Value;
+		payloadBuilder.AddCounter(TEXT("satisfactory.items.produced"), tags, delta, TEXT("item"));
 	}
 }
+*/

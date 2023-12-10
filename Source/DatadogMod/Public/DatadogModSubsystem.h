@@ -7,6 +7,15 @@
 #include "DatadogApi.h"
 #include "DatadogModSubsystem.generated.h"
 
+UCLASS()
+class DATADOGMOD_API UDDCollectionPlugin : public UObject {
+
+	GENERATED_BODY()
+
+public:
+	virtual void Collect(UWorld* world, DatadogPayloadBuilder& payloadBuilder) {};
+};
+
 /**
  * 
  */
@@ -18,8 +27,6 @@ class DATADOGMOD_API ADatadogModSubsystem : public AModSubsystem
 private:
 	virtual void BeginPlay() override;
 	void CollectStats();
-	void CollectPowerStats(UWorld* world, DatadogPayloadBuilder &payloadBuilder);
-	void CollectStatistics(UWorld* world, DatadogPayloadBuilder &payloadBuilder);
 
 	FTimerHandle statTimerHandle;
 
@@ -28,4 +35,7 @@ private:
 
 	UPROPERTY()
 	UDatadogApi *datadogApi;
+
+	UPROPERTY()
+	TArray<UDDCollectionPlugin*> Collectors;
 };
