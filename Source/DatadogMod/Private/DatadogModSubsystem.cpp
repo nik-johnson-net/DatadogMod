@@ -2,6 +2,7 @@
 
 
 #include "DatadogModSubsystem.h"
+#include "FGGameState.h"
 #include "Collectors/DDCollectorCircuit.h"
 
 void ADatadogModSubsystem::BeginPlay() {
@@ -24,6 +25,12 @@ void ADatadogModSubsystem::CollectStats() {
 		return;
 	}
 
+	auto gameState = Cast<AFGGameState>(world->GetGameState());
+	if (gameState == NULL) {
+		UE_LOG(LogDatadogMod, Error, TEXT("Could not get game state."));
+		return;
+	}
+
 	// Don't do anything if the game is paused.
 	if (world->IsPaused()) {
 		UE_LOG(LogDatadogMod, Verbose, TEXT("Not collecting stats because the world is paused."));
@@ -36,6 +43,8 @@ void ADatadogModSubsystem::CollectStats() {
 	DatadogPayloadBuilder payloadBuilder;
 	payloadBuilder.SetInterval(collectionPeriod);
 	payloadBuilder.SetTimestamp(FDateTime::UtcNow().ToUnixTimestamp());
+	TArray<FString> tags{ "session_name:" + gameState->GetSessionName() };
+	payloadBuilder.SetGlobalTags(tags);
 
 	for (auto& collector : Collectors) {
 		collector->Collect(world, payloadBuilder);
