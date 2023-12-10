@@ -1,7 +1,7 @@
 #pragma once
 
 #include "DatadogModSubsystem.h"
-#include "UDDCollectorCircuit.generated.h"
+#include "DDCollectorCircuit.generated.h"
 
 UCLASS()
 class UDDCollectorCircuit : public UDDCollectionPlugin
@@ -9,5 +9,5 @@ class UDDCollectorCircuit : public UDDCollectionPlugin
 	GENERATED_BODY()
 
 public:
-	void Collect(UWorld* world, DatadogPayloadBuilder& payloadBuilder);
+	virtual void Collect(UWorld* world, DatadogPayloadBuilder& payloadBuilder) override;
 };

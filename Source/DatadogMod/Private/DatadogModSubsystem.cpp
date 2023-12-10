@@ -2,13 +2,19 @@
 
 
 #include "DatadogModSubsystem.h"
+#include "Collectors/DDCollectorCircuit.h"
 
 void ADatadogModSubsystem::BeginPlay() {
 	Super::BeginPlay();
-
-	datadogApi = NewObject<UDatadogApi>();
 	GetWorldTimerManager().SetTimer(statTimerHandle, this, &ADatadogModSubsystem::CollectStats, collectionPeriod, true);
-	UE_LOG(LogDatadogMod, Verbose, TEXT("Datadog Subsystem Initialized."));
+}
+
+void ADatadogModSubsystem::Init()
+{
+	Super::Init();
+	datadogApi = NewObject<UDatadogApi>();
+	Collectors.Add(NewObject<UDDCollectorCircuit>());
+	UE_LOG(LogDatadogMod, Log, TEXT("Datadog Subsystem Initialized."));
 }
 
 void ADatadogModSubsystem::CollectStats() {

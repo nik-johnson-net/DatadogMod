@@ -26,6 +26,7 @@ class DATADOGMOD_API ADatadogModSubsystem : public AModSubsystem
 	
 private:
 	virtual void BeginPlay() override;
+	virtual void Init() override;
 	void CollectStats();
 
 	FTimerHandle statTimerHandle;

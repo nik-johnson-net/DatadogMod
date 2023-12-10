@@ -1,4 +1,4 @@
-#include "UDDCollectorCircuit.h"
+#include "DDCollectorCircuit.h"
 #include "Buildables/FGBuildableCircuitSwitch.h"
 #include "Buildables/FGBuildablePriorityPowerSwitch.h"
 #include "FGCircuitSubsystem.h"
@@ -17,7 +17,7 @@ void UDDCollectorCircuit::Collect(UWorld* world, DatadogPayloadBuilder& payloadB
 		// Cast to a Power Circuit. If it's not, skip. Right now there are only power circuits, so this should always pass.
 		UFGPowerCircuit* powerCircuit = Cast<UFGPowerCircuit>(it.Value);
 		if (powerCircuit == NULL) {
-			UE_LOG(LogDatadogMod, Verbose, TEXT("Failed to cast circuit id %d to UFGPowerCircuit"), it.Value->GetCircuitID());
+			UE_LOG(LogDatadogMod, Warning, TEXT("Failed to cast circuit id %d to UFGPowerCircuit"), it.Value->GetCircuitID());
 			continue;
 		}
 
@@ -45,7 +45,6 @@ void UDDCollectorCircuit::Collect(UWorld* world, DatadogPayloadBuilder& payloadB
 			}
 
 			// Record Switch State
-			UE_LOG(LogDatadogMod, Verbose, TEXT("Power Switch %s is %b"), *circuitSwitch->GetBuildingTag(), circuitSwitch->IsSwitchOn());
 			TArray<FString> tags{ TEXT("switch_name:") + circuitSwitch->GetBuildingTag() };
 			payloadBuilder.AddGauge(TEXT("satisfactory.power.switch"), tags, circuitSwitch->IsSwitchOn());
 		}
