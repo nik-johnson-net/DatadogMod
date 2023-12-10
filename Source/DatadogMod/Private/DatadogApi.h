@@ -6,11 +6,11 @@
 #include "DatadogApi.generated.h"
 
 UENUM()
-enum class MetricType : uint8 {
-	Unspecified,
-	Count,
-	Rate,
-	Gauge,
+enum class EMetricType : uint8 {
+	Unspecified = 0,
+	Count = 1,
+	Rate = 2,
+	Gauge = 3,
 };
 
 USTRUCT()
@@ -46,7 +46,7 @@ struct FDatadogTimeseries {
 	TArray<FTimeseriesPoint> points;
 
 	UPROPERTY()
-	MetricType type;
+	EMetricType type;
 };
 
 
@@ -69,7 +69,7 @@ public:
 	TArray<FDatadogTimeseries> Build();
 
 private:
-	void AddMetric(MetricType type, FString& name, TArray<FString>& tags, double value, FString unit = "");
+	void AddMetric(EMetricType type, FString& name, TArray<FString>& tags, double value, FString unit = "");
 	int64 timestamp;
 	int64 interval;
 	TArray<FDatadogTimeseries> timeseries;

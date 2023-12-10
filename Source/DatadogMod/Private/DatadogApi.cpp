@@ -22,6 +22,21 @@ static const FString SiteToHost(FString& site) {
 	}
 }
 
+
+const FJsonObjectConverter::CustomExportCallback ExportEnumAsNumber =
+FJsonObjectConverter::CustomExportCallback::CreateLambda(
+	[](FProperty* Property, const void* Value) -> TSharedPtr<FJsonValue>
+	{
+		if (FEnumProperty* EnumProperty = CastField<FEnumProperty>(Property))
+		{
+			// export enums as strings
+			UEnum* EnumDef = EnumProperty->GetEnum();
+			auto NumberValue = EnumProperty->GetUnderlyingProperty()->GetSignedIntPropertyValue(Value);
+			return MakeShared<FJsonValueNumber>(NumberValue);
+		}
+		return {};
+	});
+
 UDatadogApi::UDatadogApi()
 {
 	GConfig->GetString(TEXT("/Script/DatadogMod.DatadogApi"), TEXT("DatadogApiKey"), DatadogApiKey, GGameIni);
@@ -41,7 +56,7 @@ void UDatadogApi::Submit(TArray<FDatadogTimeseries> timeseries)
 	FMetricsPayload payload;
 	payload.series = timeseries;
 	
-	bool success = FJsonObjectConverter::UStructToJsonObjectString(payload, jsonString);
+	bool success = FJsonObjectConverter::UStructToJsonObjectString(payload, jsonString, 0, 0, 0, &ExportEnumAsNumber, false);
 	if (!success) {
 		UE_LOG(LogDatadogMod, Error, TEXT("Failed to serialize payload"));
 		return;
@@ -76,7 +91,7 @@ void UDatadogApi::OnResponseReceived(FHttpRequestPtr Request, FHttpResponsePtr R
 
 void DatadogPayloadBuilder::SetTimestamp(int64 ts)
 {
-	timestamp = timestamp;
+	timestamp = ts;
 }
 
 void DatadogPayloadBuilder::SetInterval(int64 newInterval)
@@ -91,17 +106,17 @@ void DatadogPayloadBuilder::SetGlobalTags(TArray<FString>& newTags)
 
 void DatadogPayloadBuilder::AddGauge(FString name, TArray<FString>& ntags, double value, FString unit)
 {
-	AddMetric(MetricType::Gauge, name, ntags, value, unit);
+	AddMetric(EMetricType::Gauge, name, ntags, value, unit);
 }
 
 void DatadogPayloadBuilder::AddCounter(FString name, TArray<FString>& ntags, double value, FString unit)
 {
-	AddMetric(MetricType::Count, name, ntags, value, unit);
+	AddMetric(EMetricType::Count, name, ntags, value, unit);
 }
 
 void DatadogPayloadBuilder::AddRate(FString name, TArray<FString>& ntags, double value, FString unit)
 {
-	AddMetric(MetricType::Rate, name, ntags, value, unit);
+	AddMetric(EMetricType::Rate, name, ntags, value, unit);
 }
 
 TArray<FDatadogTimeseries> DatadogPayloadBuilder::Build()
@@ -120,7 +135,7 @@ TArray<FDatadogTimeseries> DatadogPayloadBuilder::Build()
 	return timeseries;
 }
 
-void DatadogPayloadBuilder::AddMetric(MetricType type, FString& name, TArray<FString>& ntags, double value, FString unit)
+void DatadogPayloadBuilder::AddMetric(EMetricType type, FString& name, TArray<FString>& ntags, double value, FString unit)
 {
 	FDatadogTimeseries newTimeseries;
 	newTimeseries.metric = name;
