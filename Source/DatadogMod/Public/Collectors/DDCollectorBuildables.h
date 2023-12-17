@@ -3,14 +3,14 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "DatadogModSubsystem.h"
+#include "DDCollector.h"
 #include "DDCollectorBuildables.generated.h"
 
 /**
  * 
  */
 UCLASS()
-class UDDCollectorBuildables : public UDDCollectionPlugin
+class DATADOGMOD_API UDDCollectorBuildables : public UDDCollector
 {
 	GENERATED_BODY()
 	

@@ -14,7 +14,7 @@ enum class EMetricType : uint8 {
 };
 
 USTRUCT()
-struct FTimeseriesPoint {
+struct DATADOGMOD_API FTimeseriesPoint {
 	
 	GENERATED_BODY()
 
@@ -26,7 +26,7 @@ struct FTimeseriesPoint {
 };
 
 USTRUCT()
-struct FDatadogTimeseries {
+struct DATADOGMOD_API FDatadogTimeseries {
 	
 	GENERATED_BODY()
 	
@@ -51,33 +51,15 @@ struct FDatadogTimeseries {
 
 
 USTRUCT()
-struct FMetricsPayload {
+struct DATADOGMOD_API FMetricsPayload {
 	GENERATED_BODY()
 
 	UPROPERTY()
 	TArray<FDatadogTimeseries> series;
 };
 
-class DatadogPayloadBuilder {
-public:
-	void SetTimestamp(int64 timestamp);
-	void SetInterval(int64 interval);
-	void SetGlobalTags(TArray<FString> &tags);
-	void AddGauge(FString name, TArray<FString>& tags, double value, FString unit = "");
-	void AddCounter(FString name, TArray<FString>& tags, double value, FString unit = "");
-	void AddRate(FString name, TArray<FString>& tags, double value, FString unit = "");
-	TArray<FDatadogTimeseries> Build();
-
-private:
-	void AddMetric(EMetricType type, FString& name, TArray<FString>& tags, double value, FString unit = "");
-	int64 timestamp;
-	int64 interval;
-	TArray<FDatadogTimeseries> timeseries;
-	TArray<FString> tags;
-};
-
 UCLASS(config=Game)
-class UDatadogApi : public UObject
+class DATADOGMOD_API UDatadogApi : public UObject
 {
 	GENERATED_BODY()
 	

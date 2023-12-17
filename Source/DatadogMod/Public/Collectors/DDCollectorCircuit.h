@@ -1,10 +1,10 @@
 #pragma once
 
-#include "DatadogModSubsystem.h"
+#include "DDCollector.h"
 #include "DDCollectorCircuit.generated.h"
 
 UCLASS()
-class UDDCollectorCircuit : public UDDCollectionPlugin
+class DATADOGMOD_API UDDCollectorCircuit : public UDDCollector
 {
 	GENERATED_BODY()
 

@@ -1,29 +1,31 @@
-// Fill out your copyright notice in the Description page of Project Settings.
-
-
-#include "DatadogModSubsystem.h"
+#include "Datadog.h"
+#include "DatadogMod.h"
 #include "FGGameState.h"
 #include "Collectors/DDCollectorCircuit.h"
 #include "Collectors/DDCollectorBuildables.h"
 
-void ADatadogModSubsystem::BeginPlay() {
-	Super::BeginPlay();
-	GetWorldTimerManager().SetTimer(statTimerHandle, this, &ADatadogModSubsystem::CollectStats, collectionPeriod, true);
+UWorld* UDatadog::GetWorld() const
+{
+	return mWorld;
 }
 
-void ADatadogModSubsystem::Init()
+void UDatadog::BeginPlay() {
+	GetWorld()->GetTimerManager().SetTimer(statTimerHandle, this, &UDatadog::CollectStats, collectionPeriod, true);
+}
+
+void UDatadog::Init(UWorld* world)
 {
-	Super::Init();
+	mWorld = world;
 	datadogApi = NewObject<UDatadogApi>();
-	
+
 	// Add Collectors Here
 	Collectors.Add(NewObject<UDDCollectorCircuit>());
-	Collectors.Add(NewObject< UDDCollectorBuildables>());
-	
+	Collectors.Add(NewObject<UDDCollectorBuildables>());
+
 	UE_LOG(LogDatadogMod, Log, TEXT("Datadog Subsystem Initialized."));
 }
 
-void ADatadogModSubsystem::CollectStats() {
+void UDatadog::CollectStats() {
 	auto world = GetWorld();
 	if (world == NULL) {
 		UE_LOG(LogDatadogMod, Error, TEXT("No world exists."));
@@ -44,7 +46,7 @@ void ADatadogModSubsystem::CollectStats() {
 
 	auto timeStart = FDateTime::Now();
 	UE_LOG(LogDatadogMod, Verbose, TEXT("Collecting stats."));
-	
+
 	DatadogPayloadBuilder payloadBuilder;
 	payloadBuilder.SetInterval(collectionPeriod);
 	payloadBuilder.SetTimestamp(FDateTime::UtcNow().ToUnixTimestamp());

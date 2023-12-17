@@ -1,4 +1,4 @@
-#include "DDCollectorCircuit.h"
+#include "Collectors/DDCollectorCircuit.h"
 #include "Buildables/FGBuildableCircuitSwitch.h"
 #include "Buildables/FGBuildablePriorityPowerSwitch.h"
 #include "FGCircuitSubsystem.h"
