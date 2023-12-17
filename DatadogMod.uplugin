@@ -1,6 +1,6 @@
 {
 	"FileVersion": 3,
-	"Version": 1,
+	"Version": 0,
 	"VersionName": "0.1.0",
 	"FriendlyName": "DatadogMod",
 	"Description": "Datadog Adapter",
