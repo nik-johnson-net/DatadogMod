@@ -45,7 +45,8 @@ void UDDCollectorCircuit::Collect(UWorld* world, DatadogPayloadBuilder& payloadB
 			}
 
 			// Record Switch State
-			TArray<FString> tags{ TEXT("switch_name:") + circuitSwitch->GetBuildingTag() };
+			FString name = Cast<IFGBuildingTagInterface>(circuitSwitch)->Execute_GetBuildingTag(circuitSwitch);
+			TArray<FString> tags{ TEXT("switch_name:") + name };
 			payloadBuilder.AddGauge(TEXT("satisfactory.power.switch"), tags, circuitSwitch->IsSwitchOn());
 		}
 	}

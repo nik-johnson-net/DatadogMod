@@ -16,5 +16,7 @@ protected:
 	virtual bool DoesSupportWorldType(const EWorldType::Type WorldType) const override;
 
 private:
+
+	UPROPERTY()
 	UDatadog* mDatadog;
 };

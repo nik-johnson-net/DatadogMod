@@ -63,13 +63,16 @@ void UDatadogApi::Submit(TArray<FDatadogTimeseries> timeseries)
 	}
 
 	// TODO: Check the payload size. Compressed, it must be under 5 MB. Uncompressed, under 512kB.
+	if (jsonString.Len() >= 512 * 1024) {
+		UE_LOG(LogDatadogMod, Warning, TEXT("Payload over 512kB with %d metrics. Recommend batching metrics."), payload.series.Num());
+	}
 
 	auto http = &FHttpModule::Get();
 	TSharedRef<IHttpRequest> Request = http->CreateRequest();
 	Request->OnProcessRequestComplete().BindUObject(this, &UDatadogApi::OnResponseReceived);
 	
 	FString url = mHost + TEXT("/api/v2/series");
-	UE_LOG(LogDatadogMod, Verbose, TEXT("Submitting %d metrics with site %s and key %s to %s. Payload:\n%s"), timeseries.Num(), *DatadogSite, *DatadogApiKey, *url, *jsonString);
+	UE_LOG(LogDatadogMod, Log, TEXT("Submitting %d metrics with site %s and key %s to %s (payload size: %.1f)."), timeseries.Num(), *DatadogSite, *DatadogApiKey, *url, jsonString.Len() / 1024.0);
 	Request->SetURL(url);
 	Request->SetVerb("POST");
 	Request->SetHeader(TEXT("User-Agent"), TEXT("X-UnrealEngine-Agent"));

@@ -11,6 +11,7 @@ UWorld* UDatadog::GetWorld() const
 
 void UDatadog::BeginPlay() {
 	GetWorld()->GetTimerManager().SetTimer(statTimerHandle, this, &UDatadog::CollectStats, collectionPeriod, true);
+	UE_LOG(LogDatadogMod, Log, TEXT("Datadog Timer started, collecting every %.2f seconds."), collectionPeriod);
 }
 
 void UDatadog::Init(UWorld* world)
@@ -22,7 +23,7 @@ void UDatadog::Init(UWorld* world)
 	Collectors.Add(NewObject<UDDCollectorCircuit>());
 	Collectors.Add(NewObject<UDDCollectorBuildables>());
 
-	UE_LOG(LogDatadogMod, Log, TEXT("Datadog Subsystem Initialized."));
+	UE_LOG(LogDatadogMod, Log, TEXT("Datadog Collectors Initialized."));
 }
 
 void UDatadog::CollectStats() {
