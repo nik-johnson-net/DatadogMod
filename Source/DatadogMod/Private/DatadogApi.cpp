@@ -1,4 +1,5 @@
 #include "DatadogApi.h"
+#include "zlib/1.2.12/include/zlib.h"
 #include "Runtime/JsonUtilities/Public/JsonObjectConverter.h"
 
 static const FString SiteToHost(FString& site) {
@@ -51,6 +52,7 @@ UDatadogApi::UDatadogApi()
 
 void UDatadogApi::Submit(TArray<FDatadogTimeseries> timeseries)
 {
+	// Serialize timeseries to json
 	FString jsonString;
 
 	FMetricsPayload payload;
@@ -62,8 +64,30 @@ void UDatadogApi::Submit(TArray<FDatadogTimeseries> timeseries)
 		return;
 	}
 
+	// Compress with zlib
+	unsigned long bounds = compressBound(jsonString.Len());
+	Bytef *buffer = (Bytef*)malloc(bounds);
+	TArray<uint8> plain = StringToArray<ANSICHAR>(*jsonString);
+	int result = compress(buffer, &bounds, plain.GetData(), plain.Num());
+	
+	if (result != Z_OK) {
+		if (result == Z_BUF_ERROR) {
+			UE_LOG(LogDatadogMod, Error, TEXT("Failed to compress payload: not enough space in output buffer"));
+		}
+		else if (result == Z_MEM_ERROR) {
+			UE_LOG(LogDatadogMod, Error, TEXT("Failed to compress payload: not enough memory"));
+		}
+		else {
+			UE_LOG(LogDatadogMod, Error, TEXT("Failed to compress payload: unknown reason"));
+		}
+		return;
+	}
+
+	TArray<uint8> compressedData = TArray<uint8>(buffer, bounds);
+
+
 	// TODO: Check the payload size. Compressed, it must be under 5 MB. Uncompressed, under 512kB.
-	if (jsonString.Len() >= 512 * 1024) {
+	if (compressedData.Num() >= 512 * 1000) {
 		UE_LOG(LogDatadogMod, Warning, TEXT("Payload over 512kB with %d metrics. Recommend batching metrics."), payload.series.Num());
 	}
 
@@ -77,9 +101,10 @@ void UDatadogApi::Submit(TArray<FDatadogTimeseries> timeseries)
 	Request->SetVerb("POST");
 	Request->SetHeader(TEXT("User-Agent"), TEXT("X-UnrealEngine-Agent"));
 	Request->SetHeader(TEXT("Content-Type"), TEXT("application/json"));
+	Request->SetHeader(TEXT("Content-Encoding"), TEXT("deflate"));
 	Request->SetHeader(TEXT("Accept"), TEXT("application/json"));
 	Request->SetHeader(TEXT("DD-API-KEY"), DatadogApiKey);
-	Request->SetContentAsString(jsonString);
+	Request->SetContent(compressedData);
 	Request->ProcessRequest();
 }
 

@@ -1,6 +1,7 @@
 // Copyright Epic Games, Inc. All Rights Reserved.
 
 using UnrealBuildTool;
+using System.IO;
 
 public class DatadogMod : ModuleRules
 {
@@ -51,5 +52,19 @@ public class DatadogMod : ModuleRules
 				// ... add any modules that your module loads dynamically here ...
 			}
             );
+
+        var PlatformName = Target.Platform.ToString();
+        var ThirdPartyFolder = Path.Combine(ModuleDirectory, "../../ThirdParty");
+        var LibraryFolder = Path.Combine(ThirdPartyFolder, PlatformName);
+        //PublicIncludePaths.Add(Path.Combine(ThirdPartyFolder, "include"));
+
+        //// zlib        
+        //if (Target.Platform == UnrealTargetPlatform.Win64)
+        //{
+        //    PublicAdditionalLibraries.Add(Path.Combine(LibraryFolder, "zlibwapi.lib"));
+        //} else if (Target.Platform == UnrealTargetPlatform.Linux)
+        //{
+        //    PublicAdditionalLibraries.Add(Path.Combine(LibraryFolder, "libz.a"));
+        //}
     }
 }

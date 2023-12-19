@@ -48,13 +48,30 @@ void UDDCollectorBuildables::Collect(UWorld* world, DatadogPayloadBuilder& paylo
 				auto recipe = manufacturer->GetCurrentRecipe();
 				auto outputs = UFGRecipe::GetProducts(recipe);
 				for (auto& output : outputs) {
-					auto name = UFGResourceDescriptor::GetItemName(output.ItemClass);
+					auto name = UFGItemDescriptor::GetItemName(output.ItemClass);
+					auto form = UFGItemDescriptor::GetForm(output.ItemClass);
+					
 					// Avg Recipe Output Per Minute = Amount * ((Duration * Machine Speed) / 60 seconds) * Machine Efficiency
 					auto resourcePerMinute = output.Amount * manufacturer->GetProductivity() * (UFGRecipe::GetManufacturingDuration(recipe) * manufacturer->GetManufacturingSpeed() / 60.0f);
 					
 					auto copyTags = TArray<FString>(tags);
 					copyTags.Add("item:" + name.ToString());
+
 					payloadBuilder.AddGauge(TEXT("satisfactory.building.production"), tags, resourcePerMinute, "item");
+				}
+
+				auto inputs = UFGRecipe::GetIngredients(recipe);
+				for (auto& input : inputs) {
+					auto name = UFGItemDescriptor::GetItemName(input.ItemClass);
+					auto form = UFGItemDescriptor::GetForm(input.ItemClass);
+
+					// Avg Recipe Input Per Minute = Amount * ((Duration * Machine Speed) / 60 seconds) * Machine Efficiency
+					auto resourcePerMinute = input.Amount * manufacturer->GetProductivity() * (UFGRecipe::GetManufacturingDuration(recipe) * manufacturer->GetManufacturingSpeed() / 60.0f);
+
+					auto copyTags = TArray<FString>(tags);
+					copyTags.Add("item:" + name.ToString());
+
+					// payloadBuilder.AddGauge(TEXT("satisfactory.building.production"), tags, resourcePerMinute, "item");
 				}
 
 				continue;
