@@ -22,11 +22,11 @@ private:
 	TArray<FString> tags;
 };
 
-UCLASS()
+UCLASS(Abstract)
 class DATADOGMOD_API UDDCollector : public UObject {
 
 	GENERATED_BODY()
 
 public:
-	virtual void Collect(UWorld* world, DatadogPayloadBuilder& payloadBuilder) {};
+	virtual void Collect(UWorld* world, DatadogPayloadBuilder& payloadBuilder, const TMap<int32, FString>& circuitNames) {};
 };

@@ -3,6 +3,9 @@
 #include "FGGameState.h"
 #include "Collectors/DDCollectorCircuit.h"
 #include "Collectors/DDCollectorBuildables.h"
+#include "FGCircuitSubsystem.h"
+#include "Buildables/FGBuildableCircuitSwitch.h"
+#include "FGBuildingTagInterface.h"
 
 UWorld* UDatadog::GetWorld() const
 {
@@ -54,12 +57,48 @@ void UDatadog::CollectStats() {
 	TArray<FString> tags{ "session_name:" + gameState->GetSessionName() };
 	payloadBuilder.SetGlobalTags(tags);
 
+	// Compute circuit names
+	TMap<int32, FString> circuitNames = BuildCircuitNames(world);
+
 	for (auto& collector : Collectors) {
-		collector->Collect(world, payloadBuilder);
+		collector->Collect(world, payloadBuilder, circuitNames);
 	}
 
 	datadogApi->Submit(payloadBuilder.Build());
 
 	auto elapsed = (FDateTime::Now() - timeStart).GetTotalSeconds();
 	UE_LOG(LogDatadogMod, Verbose, TEXT("Stats collection and submission took %.3f seconds"), elapsed);
+}
+
+FString UDatadog::GetCircuitName(UFGCircuit& powerCircuit)
+{
+	auto sub = powerCircuit.GetOwningCircuitSubsystem();
+	for (auto& bridge : sub->mCircuitBridges) {
+		// Check if it's a physical power switch
+		AFGBuildableCircuitSwitch* circuitSwitch = Cast<AFGBuildableCircuitSwitch>(bridge);
+		if (circuitSwitch == nullptr) {
+			continue;
+		}
+		if (circuitSwitch->GetCircuitID1() == powerCircuit.GetCircuitID()) {
+			return Cast<IFGBuildingTagInterface>(circuitSwitch)->Execute_GetBuildingTag(circuitSwitch);
+		}
+	}
+
+	return FString::FString();
+}
+
+TMap<int32, FString> UDatadog::BuildCircuitNames(UWorld *world)
+{
+	TMap<int32, FString> names;
+
+	AFGCircuitSubsystem* circuitSubsystem = AFGCircuitSubsystem::Get(world);
+	if (circuitSubsystem == nullptr) {
+		return names;
+	}
+
+	for (auto& circuit : circuitSubsystem->mCircuits) {
+		names.Add(circuit.Key, GetCircuitName(*circuit.Value));
+	}
+	
+	return names;
 }

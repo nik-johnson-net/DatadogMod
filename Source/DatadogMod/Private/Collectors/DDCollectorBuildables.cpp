@@ -9,21 +9,32 @@
 #include "Buildables/FGBuildableResourceExtractor.h"
 #include "Resources/FGResourceDescriptor.h"
 #include "Buildables/FGBuildableManufacturer.h"
+#include "FGPowerCircuit.h"
+#include "FGPowerInfoComponent.h"
 
-struct Stat {
-	 
-};
-
-void UDDCollectorBuildables::Collect(UWorld* world, DatadogPayloadBuilder& payloadBuilder)
+void UDDCollectorBuildables::Collect(UWorld* world, DatadogPayloadBuilder& payloadBuilder, const TMap<int32, FString>& circuitNames)
 {
 	auto buildableSubsystem = AFGBuildableSubsystem::Get(world);
+	if (buildableSubsystem == nullptr) {
+		UE_LOG(LogDatadogMod, Error, TEXT("Can't load BuildableSubsystem, not reporting building stats."));
+		return;
+	}
 
 	TArray<AFGBuildableFactory*> factories;
 	buildableSubsystem->GetTypedBuildable(factories);
 
 	for (auto& factory : factories) {
-		TArray<FString> tags{ "id:" + FString::FromInt(factory->GetUniqueID()), "building:" + factory->mDisplayName.ToString()};
-		payloadBuilder.AddGauge(TEXT("satisfactory.building.productivity"), tags, factory->GetProductivity(), "percent");
+		TArray<FString> tags{ "id:" + FString::FromInt(factory->GetUniqueID()), "building:" + factory->mDisplayName.ToString() };
+
+		UFGPowerInfoComponent* powerInfo = factory->GetPowerInfo();
+		if (powerInfo != nullptr) {
+			const FString *name = circuitNames.Find(powerInfo->GetPowerCircuit()->GetCircuitID());
+			if (name != nullptr) {
+				tags.Add(TEXT("circuit:") + *name);
+			}
+		}
+
+		payloadBuilder.AddGauge(TEXT("satisfactory.building.productivity"), tags, factory->GetProductivity(), "fraction");
 		payloadBuilder.AddGauge(TEXT("satisfactory.building.powered"), tags, factory->HasPower(), "boolean");
 		
 		if (factory->HasPower() && factory->IsConfigured()) {
@@ -37,7 +48,7 @@ void UDDCollectorBuildables::Collect(UWorld* world, DatadogPayloadBuilder& paylo
 				auto name = UFGResourceDescriptor::GetItemName(resourceExtractor->GetExtractableResource()->GetResourceClass());
 				
 				tags.Add("item:" + name.ToString());
-				payloadBuilder.AddGauge(TEXT("satisfactory.building.production"), tags, extractedPerMinute, "item");
+				payloadBuilder.AddGauge(TEXT("satisfactory.building.production"), tags, extractedPerMinute, "items per minute");
 				
 				continue;
 			}
@@ -57,7 +68,7 @@ void UDDCollectorBuildables::Collect(UWorld* world, DatadogPayloadBuilder& paylo
 					auto copyTags = TArray<FString>(tags);
 					copyTags.Add("item:" + name.ToString());
 
-					payloadBuilder.AddGauge(TEXT("satisfactory.building.production"), tags, resourcePerMinute, "item");
+					payloadBuilder.AddGauge(TEXT("satisfactory.building.production"), tags, resourcePerMinute, "items per minute");
 				}
 
 				auto inputs = UFGRecipe::GetIngredients(recipe);
@@ -71,7 +82,7 @@ void UDDCollectorBuildables::Collect(UWorld* world, DatadogPayloadBuilder& paylo
 					auto copyTags = TArray<FString>(tags);
 					copyTags.Add("item:" + name.ToString());
 
-					// payloadBuilder.AddGauge(TEXT("satisfactory.building.production"), tags, resourcePerMinute, "item");
+					payloadBuilder.AddGauge(TEXT("satisfactory.building.consumption"), tags, resourcePerMinute, "items per minute");
 				}
 
 				continue;

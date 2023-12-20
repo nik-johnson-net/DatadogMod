@@ -67,8 +67,9 @@ void UDatadogApi::Submit(TArray<FDatadogTimeseries> timeseries)
 	// Compress with zlib
 	unsigned long bounds = compressBound(jsonString.Len());
 	Bytef *buffer = (Bytef*)malloc(bounds);
-	TArray<uint8> plain = StringToArray<ANSICHAR>(*jsonString);
-	int result = compress(buffer, &bounds, plain.GetData(), plain.Num());
+
+	auto convertedJson = (char*)TCHAR_TO_UTF8(*jsonString);
+	int result = compress(buffer, &bounds, (unsigned char*)convertedJson, strlen(convertedJson));
 	
 	if (result != Z_OK) {
 		if (result == Z_BUF_ERROR) {

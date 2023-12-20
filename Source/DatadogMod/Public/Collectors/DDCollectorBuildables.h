@@ -15,5 +15,5 @@ class DATADOGMOD_API UDDCollectorBuildables : public UDDCollector
 	GENERATED_BODY()
 	
 public:
-	virtual void Collect(UWorld* world, DatadogPayloadBuilder& payloadBuilder) override;
+	virtual void Collect(UWorld* world, DatadogPayloadBuilder& payloadBuilder, const TMap<int32, FString>& circuitNames) override;
 };

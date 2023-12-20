@@ -3,6 +3,7 @@
 #include "CoreMinimal.h"
 #include "DatadogApi.h"
 #include "DDCollector.h"
+#include "FGCircuit.h"
 #include "Datadog.generated.h"
 
 UCLASS()
@@ -16,6 +17,8 @@ public:
 	void CollectStats();
 
 private:
+	FString GetCircuitName(UFGCircuit& powerCircuit);
+	TMap< int32, FString> BuildCircuitNames(UWorld* world);
 	FTimerHandle statTimerHandle;
 
 	UPROPERTY()

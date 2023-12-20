@@ -41,6 +41,7 @@ public class DatadogMod : ModuleRules
                 "SlateCore",
                 "FactoryGame",
                 "HTTP", "Json", "JsonUtilities",
+                "zlib",
 				// ... add private dependencies that you statically link with here ...	
 			}
             );
