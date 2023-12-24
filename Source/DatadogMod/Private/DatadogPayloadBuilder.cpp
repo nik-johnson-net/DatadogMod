@@ -32,6 +32,7 @@ void DatadogPayloadBuilder::AddRate(FString name, TArray<FString>& ntags, double
 
 void DatadogPayloadBuilder::AddHistogram(FString name, TArray<FString>& ntags, TArray<double> values, FString unit)
 {
+	// TODO: This should all be calculated on Build(). Store value indexed by name, ntags instead.
 	values.Sort();
 
 	// Calculate Sum

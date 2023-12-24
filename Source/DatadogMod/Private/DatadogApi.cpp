@@ -70,9 +70,12 @@ void UDatadogApi::Submit(TArray<FDatadogTimeseries> timeseries)
 		return;
 	}
 
-	// TODO: Check the payload size. Compressed, it must be under 5 MB. Uncompressed, under 512kB.
-	if (compressedData.Num() >= 512 * 1000) {
-		UE_LOG(LogDatadogMod, Warning, TEXT("Payload over 512kB with %d metrics. Recommend batching metrics."), payload.series.Num());
+	// Check the payload size. Compressed, it must be under 5 MB. Uncompressed, under 512kB.
+	if (jsonString.Len() >= 4.5 * 1024 * 1024) {
+		UE_LOG(LogDatadogMod, Warning, TEXT("Uncompressed Payload over 4.5MiB with %d metrics, max allowed is 5MiB. Recommend batching metrics."), payload.series.Num());
+	}
+	if (compressedData.Num() >= 500 * 1000) {
+		UE_LOG(LogDatadogMod, Warning, TEXT("Compressed Payload over 500kB with %d metrics, max allowed is 512kB Recommend batching metrics."), payload.series.Num());
 	}
 
 	auto http = &FHttpModule::Get();
@@ -80,7 +83,7 @@ void UDatadogApi::Submit(TArray<FDatadogTimeseries> timeseries)
 	Request->OnProcessRequestComplete().BindUObject(this, &UDatadogApi::OnResponseReceived);
 
 	FString url = mHost + TEXT("/api/v2/series");
-	UE_LOG(LogDatadogMod, Log, TEXT("Submitting %d metrics with site %s and key %s to %s (payload size: %.1f)."), timeseries.Num(), *DatadogSite, *DatadogApiKey, *url, jsonString.Len() / 1024.0);
+	UE_LOG(LogDatadogMod, Log, TEXT("Submitting %d metrics with site %s and key %s to %s (payload size: %.1fkB)."), timeseries.Num(), *DatadogSite, *DatadogApiKey, *url, jsonString.Len() / 1024.0);
 	Request->SetURL(url);
 	Request->SetVerb("POST");
 	Request->SetHeader(TEXT("User-Agent"), TEXT("X-UnrealEngine-Agent"));
@@ -108,6 +111,7 @@ void UDatadogApi::OnResponseReceived(FHttpRequestPtr Request, FHttpResponsePtr R
 // If an error occurs, Log the error and return an empty array.
 TArray<uint8> UDatadogApi::Compress(const FString& text)
 {
+	// TODO: Need to convert before compressBound, but TCHAR_TO_UTF8 can't be stored?
 	unsigned long bounds = compressBound(text.Len());
 	TArray<uint8> buffer = TArray<uint8>();
 	buffer.SetNum(bounds);
