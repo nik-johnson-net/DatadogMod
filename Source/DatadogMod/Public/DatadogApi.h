@@ -67,6 +67,7 @@ public:
 	UDatadogApi();
 	void Submit(TArray<FDatadogTimeseries> timeseries);
 	void OnResponseReceived(FHttpRequestPtr Request, FHttpResponsePtr Response, bool bWasSuccessful);
+	static TArray<uint8> Compress(const FString& text);
 
 private:
 	UPROPERTY(Config)

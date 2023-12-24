@@ -27,7 +27,7 @@ void UDDCollectorBuildables::Collect(UWorld* world, DatadogPayloadBuilder& paylo
 		TArray<FString> tags{ "id:" + FString::FromInt(factory->GetUniqueID()), "building:" + factory->mDisplayName.ToString() };
 
 		UFGPowerInfoComponent* powerInfo = factory->GetPowerInfo();
-		if (powerInfo != nullptr) {
+		if (powerInfo != nullptr && powerInfo->GetPowerCircuit() != nullptr) {
 			const FString *name = circuitNames.Find(powerInfo->GetPowerCircuit()->GetCircuitID());
 			if (name != nullptr) {
 				tags.Add(TEXT("circuit:") + *name);

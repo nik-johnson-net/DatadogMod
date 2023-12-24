@@ -64,28 +64,11 @@ void UDatadogApi::Submit(TArray<FDatadogTimeseries> timeseries)
 		return;
 	}
 
-	// Compress with zlib
-	unsigned long bounds = compressBound(jsonString.Len());
-	Bytef *buffer = (Bytef*)malloc(bounds);
-
-	auto convertedJson = (char*)TCHAR_TO_UTF8(*jsonString);
-	int result = compress(buffer, &bounds, (unsigned char*)convertedJson, strlen(convertedJson));
-	
-	if (result != Z_OK) {
-		if (result == Z_BUF_ERROR) {
-			UE_LOG(LogDatadogMod, Error, TEXT("Failed to compress payload: not enough space in output buffer"));
-		}
-		else if (result == Z_MEM_ERROR) {
-			UE_LOG(LogDatadogMod, Error, TEXT("Failed to compress payload: not enough memory"));
-		}
-		else {
-			UE_LOG(LogDatadogMod, Error, TEXT("Failed to compress payload: unknown reason"));
-		}
+	// Compress with zlib. Zero-array means an error.
+	TArray<uint8> compressedData = Compress(jsonString);
+	if (compressedData.IsEmpty()) {
 		return;
 	}
-
-	TArray<uint8> compressedData = TArray<uint8>(buffer, bounds);
-
 
 	// TODO: Check the payload size. Compressed, it must be under 5 MB. Uncompressed, under 512kB.
 	if (compressedData.Num() >= 512 * 1000) {
@@ -95,7 +78,7 @@ void UDatadogApi::Submit(TArray<FDatadogTimeseries> timeseries)
 	auto http = &FHttpModule::Get();
 	TSharedRef<IHttpRequest> Request = http->CreateRequest();
 	Request->OnProcessRequestComplete().BindUObject(this, &UDatadogApi::OnResponseReceived);
-	
+
 	FString url = mHost + TEXT("/api/v2/series");
 	UE_LOG(LogDatadogMod, Log, TEXT("Submitting %d metrics with site %s and key %s to %s (payload size: %.1f)."), timeseries.Num(), *DatadogSite, *DatadogApiKey, *url, jsonString.Len() / 1024.0);
 	Request->SetURL(url);
@@ -118,6 +101,34 @@ void UDatadogApi::OnResponseReceived(FHttpRequestPtr Request, FHttpResponsePtr R
 			UE_LOG(LogDatadogMod, Error, TEXT("Metrics submission rejected: %s"), *Response->GetContentAsString());
 		}
 	}
+}
+
+
+// Compress given FString using zlib's deflate method.
+// If an error occurs, Log the error and return an empty array.
+TArray<uint8> UDatadogApi::Compress(const FString& text)
+{
+	unsigned long bounds = compressBound(text.Len());
+	TArray<uint8> buffer = TArray<uint8>();
+	buffer.SetNum(bounds);
+
+	int result = compress(buffer.GetData(), &bounds, (unsigned char*)TCHAR_TO_UTF8(*text), text.Len());
+	buffer.SetNum(bounds);
+
+	if (result != Z_OK) {
+		if (result == Z_BUF_ERROR) {
+			UE_LOG(LogDatadogMod, Error, TEXT("Failed to compress payload: not enough space in output buffer"));
+		}
+		else if (result == Z_MEM_ERROR) {
+			UE_LOG(LogDatadogMod, Error, TEXT("Failed to compress payload: not enough memory"));
+		}
+		else {
+			UE_LOG(LogDatadogMod, Error, TEXT("Failed to compress payload: unknown reason"));
+		}
+		return TArray<uint8>();
+	}
+
+	return buffer;
 }
 
 void DatadogPayloadBuilder::SetTimestamp(int64 ts)
@@ -148,6 +159,23 @@ void DatadogPayloadBuilder::AddCounter(FString name, TArray<FString>& ntags, dou
 void DatadogPayloadBuilder::AddRate(FString name, TArray<FString>& ntags, double value, FString unit)
 {
 	AddMetric(EMetricType::Rate, name, ntags, value, unit);
+}
+
+void DatadogPayloadBuilder::AddHistogram(FString name, TArray<FString>& tags, TArray<double> values, FString unit = "")
+{
+	values.Sort();
+
+	// Calculate Sum
+	double sum;
+	for (auto& it : values) {
+		sum += it;
+	}
+
+	AddMetric(EMetricType::Count, name + ".count", tags, values.Num());
+	AddMetric(EMetricType::Gauge, name + ".max", tags, values.Last(), unit);
+	AddMetric(EMetricType::Gauge, name + ".avg", tags, sum / double(values.Num()), unit);
+	AddMetric(EMetricType::Gauge, name + ".median", tags, values[values.Num() / 2], unit);
+	AddMetric(EMetricType::Gauge, name + ".95percentile", tags, values[(values.Num() * 95) / 100], unit);
 }
 
 TArray<FDatadogTimeseries> DatadogPayloadBuilder::Build()

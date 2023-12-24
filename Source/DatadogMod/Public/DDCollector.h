@@ -12,6 +12,7 @@ public:
 	void AddGauge(FString name, TArray<FString>& tags, double value, FString unit = "");
 	void AddCounter(FString name, TArray<FString>& tags, double value, FString unit = "");
 	void AddRate(FString name, TArray<FString>& tags, double value, FString unit = "");
+	void AddHistogram(FString name, TArray<FString>& tags, TArray<double> values, FString unit = "");
 	TArray<FDatadogTimeseries> Build();
 
 private:
