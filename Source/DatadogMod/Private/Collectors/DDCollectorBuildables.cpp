@@ -26,6 +26,7 @@ void UDDCollectorBuildables::Collect(UWorld* world, DatadogPayloadBuilder& paylo
 	for (auto& factory : factories) {
 		TArray<FString> tags{ "id:" + FString::FromInt(factory->GetUniqueID()), "building:" + factory->mDisplayName.ToString() };
 
+		// Add circuit name to tags
 		UFGPowerInfoComponent* powerInfo = factory->GetPowerInfo();
 		if (powerInfo != nullptr && powerInfo->GetPowerCircuit() != nullptr) {
 			const FString *name = circuitNames.Find(powerInfo->GetPowerCircuit()->GetCircuitID());
@@ -38,9 +39,6 @@ void UDDCollectorBuildables::Collect(UWorld* world, DatadogPayloadBuilder& paylo
 		payloadBuilder.AddGauge(TEXT("satisfactory.building.powered"), tags, factory->HasPower(), "boolean");
 		
 		if (factory->HasPower() && factory->IsConfigured()) {
-			factory->GetProductionCycleTime();
-			factory->GetProductivity();
-
 			// Check if this factory is a Resource Extractor (ex. Miner, Water Pump)
 			AFGBuildableResourceExtractor* resourceExtractor = Cast<AFGBuildableResourceExtractor>(factory);
 			if (resourceExtractor != NULL) {
@@ -68,7 +66,7 @@ void UDDCollectorBuildables::Collect(UWorld* world, DatadogPayloadBuilder& paylo
 					auto copyTags = TArray<FString>(tags);
 					copyTags.Add("item:" + name.ToString());
 
-					payloadBuilder.AddGauge(TEXT("satisfactory.building.production"), tags, resourcePerMinute, "items per minute");
+					payloadBuilder.AddGauge(TEXT("satisfactory.building.production"), copyTags, resourcePerMinute, "items per minute");
 				}
 
 				auto inputs = UFGRecipe::GetIngredients(recipe);
@@ -82,7 +80,7 @@ void UDDCollectorBuildables::Collect(UWorld* world, DatadogPayloadBuilder& paylo
 					auto copyTags = TArray<FString>(tags);
 					copyTags.Add("item:" + name.ToString());
 
-					payloadBuilder.AddGauge(TEXT("satisfactory.building.consumption"), tags, resourcePerMinute, "items per minute");
+					payloadBuilder.AddGauge(TEXT("satisfactory.building.consumption"), copyTags, resourcePerMinute, "items per minute");
 				}
 
 				continue;

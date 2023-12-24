@@ -93,12 +93,20 @@ TMap<int32, FString> UDatadog::BuildCircuitNames(UWorld *world)
 
 	AFGCircuitSubsystem* circuitSubsystem = AFGCircuitSubsystem::Get(world);
 	if (circuitSubsystem == nullptr) {
+		UE_LOG(LogDatadogMod, Verbose, TEXT("Could not get circuit subsystem to build circuit names"));
 		return names;
 	}
 
+	int32 count = 0;
 	for (auto& circuit : circuitSubsystem->mCircuits) {
-		names.Add(circuit.Key, GetCircuitName(*circuit.Value));
+		FString name = GetCircuitName(*circuit.Value);
+		if (!name.IsEmpty()) {
+			count++;
+		}
+		names.Add(circuit.Key, name);
 	}
+
+	UE_LOG(LogDatadogMod, Verbose, TEXT("Found %d circuits with names."), count);
 	
 	return names;
 }
