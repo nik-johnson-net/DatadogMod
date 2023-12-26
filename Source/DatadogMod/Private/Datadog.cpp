@@ -84,7 +84,7 @@ FString UDatadog::GetCircuitName(UFGCircuit& powerCircuit)
 		}
 	}
 
-	return FString::FString();
+	return FString();
 }
 
 TMap<int32, FString> UDatadog::BuildCircuitNames(UWorld *world)
