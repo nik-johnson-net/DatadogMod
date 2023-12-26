@@ -1,5 +1,16 @@
 #include "DatadogPayloadBuilder.h"
 
+static FString HistogramKey(const FString& name, const TArray<FString>& tags) {
+	FString key = FString(name);
+
+	for (auto& tag : tags) {
+		key = key + "|" + tag;
+	}
+
+	return key;
+}
+
+
 void DatadogPayloadBuilder::SetTimestamp(int64 ts)
 {
 	timestamp = ts;
@@ -30,26 +41,29 @@ void DatadogPayloadBuilder::AddRate(FString name, TArray<FString>& ntags, double
 	AddMetric(EMetricType::Rate, name, ntags, value, unit);
 }
 
-void DatadogPayloadBuilder::AddHistogram(FString name, TArray<FString>& ntags, TArray<double> values, FString unit)
+void DatadogPayloadBuilder::AddHistogram(FString name, TArray<FString>& ntags, double value, FString unit)
 {
-	// TODO: This should all be calculated on Build(). Store value indexed by name, ntags instead.
-	values.Sort();
-
-	// Calculate Sum
-	double sum = 0;
-	for (auto& it : values) {
-		sum += it;
+	auto key = HistogramKey(name, ntags);
+	auto found = histograms.Find(key);
+	if (found == nullptr) {
+		DatadogHistogram histogram;
+		histogram.name = name;
+		histogram.tags = ntags;
+		histogram.unit = unit;
+		histogram.values.Add(value);
+		histograms.Add(key, histogram);
 	}
-
-	AddMetric(EMetricType::Count, name + ".count", ntags, values.Num());
-	AddMetric(EMetricType::Gauge, name + ".max", ntags, values.Last(), unit);
-	AddMetric(EMetricType::Gauge, name + ".avg", ntags, sum / double(values.Num()), unit);
-	AddMetric(EMetricType::Gauge, name + ".median", ntags, values[values.Num() / 2], unit);
-	AddMetric(EMetricType::Gauge, name + ".95percentile", ntags, values[(values.Num() * 95) / 100], unit);
+	else {
+		found->values.Add(value);
+	}
 }
 
 TArray<FDatadogTimeseries> DatadogPayloadBuilder::Build()
 {
+	// Building histograms must come before assigning global tags & metadata, since it creates new timeseries!
+	BuildHistograms();
+
+	// Assign global tags & metadata to all timeseries
 	TArray<FDatadogTimeseries> builtTimeseries;
 
 	for (auto& it : timeseries) {
@@ -77,4 +91,30 @@ void DatadogPayloadBuilder::AddMetric(EMetricType type, const FString& name, TAr
 	newTimeseries.points.Add(point);
 
 	timeseries.Add(newTimeseries);
+}
+
+void DatadogPayloadBuilder::BuildHistograms()
+{
+	// Compute Histograms
+	for (auto& histogram : histograms) {
+		histogram.Value.values.Sort();
+
+		// Calculate Sum
+		double sum = 0;
+		for (auto& it : histogram.Value.values) {
+			sum += it;
+		}
+
+		AddMetric(EMetricType::Count, histogram.Value.name + ".count", histogram.Value.tags, histogram.Value.values.Num());
+		AddMetric(EMetricType::Gauge, histogram.Value.name + ".sum", histogram.Value.tags, sum);
+		AddMetric(EMetricType::Gauge, histogram.Value.name + ".max", histogram.Value.tags, histogram.Value.values.Last(), histogram.Value.unit);
+		AddMetric(EMetricType::Gauge, histogram.Value.name + ".avg", histogram.Value.tags, sum / double(histogram.Value.values.Num()), histogram.Value.unit);
+		AddMetric(EMetricType::Gauge, histogram.Value.name + ".median", histogram.Value.tags, histogram.Value.values[histogram.Value.values.Num() / 2], histogram.Value.unit);
+		AddMetric(EMetricType::Gauge, histogram.Value.name + ".95percentile", histogram.Value.tags, histogram.Value.values[(histogram.Value.values.Num() * 95) / 100], histogram.Value.unit);
+	}
+}
+
+FString DatadogHistogram::ToString()
+{
+	return HistogramKey(name, tags);
 }

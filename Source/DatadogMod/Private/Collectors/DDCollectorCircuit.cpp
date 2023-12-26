@@ -69,22 +69,22 @@ void UDDCollectorCircuit::Collect(UWorld* world, DatadogPayloadBuilder& payloadB
 	// If the switch to B is tripped, what can we use to identify the new group that will be created?
 	//
 	// One option is to use the group uobject ID, but it is not persistent across game instances.
-	for (auto& it : circuitSubsystem->mCircuitGroups) {
-		// Check if it's a power circuit group
-		UFGPowerCircuitGroup* powerCircuitGroup = Cast<UFGPowerCircuitGroup>(it);
-		if (powerCircuitGroup == nullptr) {
-			continue;
-		}
+	//for (auto& it : circuitSubsystem->mCircuitGroups) {
+	//	// Check if it's a power circuit group
+	//	UFGPowerCircuitGroup* powerCircuitGroup = Cast<UFGPowerCircuitGroup>(it);
+	//	if (powerCircuitGroup == nullptr) {
+	//		continue;
+	//	}
 
-		auto batteryPowerInput = powerCircuitGroup->mCircuits[0]->GetBatterySumPowerInput();
+	//	auto batteryPowerInput = powerCircuitGroup->mCircuits[0]->GetBatterySumPowerInput();
 
-		TArray<FString> tags{ "circuit_group_id:" + FString::FromInt(powerCircuitGroup->GetUniqueID()) };
-		payloadBuilder.AddGauge(TEXT("satisfactory.power.group.produced"), tags, powerCircuitGroup->mBaseProduction, "megawatt");
-		payloadBuilder.AddGauge(TEXT("satisfactory.power.group.production_capacity"), tags, powerCircuitGroup->mMaximumProductionCapacity, "megawatt");
-		payloadBuilder.AddGauge(TEXT("satisfactory.power.group.consumed"), tags, powerCircuitGroup->mConsumption, "megawatt");
-		payloadBuilder.AddGauge(TEXT("satisfactory.power.group.consumption_maximum"), tags, powerCircuitGroup->mMaximumPowerConsumption, "megawatt");
-		payloadBuilder.AddGauge(TEXT("satisfactory.power.group.battery_input"), tags, batteryPowerInput, "megawatt");
-		payloadBuilder.AddGauge(TEXT("satisfactory.power.group.battery_stored"), tags, powerCircuitGroup->mTotalPowerStore, "megawatt-hour");
-		payloadBuilder.AddGauge(TEXT("satisfactory.power.group.battery_capacity"), tags, powerCircuitGroup->mTotalPowerStoreCapacity, "megawatt-hour");
-	}
+	//	TArray<FString> tags{ "circuit_group_id:" + FString::FromInt(powerCircuitGroup->GetUniqueID()) };
+	//	payloadBuilder.AddGauge(TEXT("satisfactory.power.group.produced"), tags, powerCircuitGroup->mBaseProduction, "megawatt");
+	//	payloadBuilder.AddGauge(TEXT("satisfactory.power.group.production_capacity"), tags, powerCircuitGroup->mMaximumProductionCapacity, "megawatt");
+	//	payloadBuilder.AddGauge(TEXT("satisfactory.power.group.consumed"), tags, powerCircuitGroup->mConsumption, "megawatt");
+	//	payloadBuilder.AddGauge(TEXT("satisfactory.power.group.consumption_maximum"), tags, powerCircuitGroup->mMaximumPowerConsumption, "megawatt");
+	//	payloadBuilder.AddGauge(TEXT("satisfactory.power.group.battery_input"), tags, batteryPowerInput, "megawatt");
+	//	payloadBuilder.AddGauge(TEXT("satisfactory.power.group.battery_stored"), tags, powerCircuitGroup->mTotalPowerStore, "megawatt-hour");
+	//	payloadBuilder.AddGauge(TEXT("satisfactory.power.group.battery_capacity"), tags, powerCircuitGroup->mTotalPowerStoreCapacity, "megawatt-hour");
+	//}
 }
